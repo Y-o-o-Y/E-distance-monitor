@@ -4,6 +4,8 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import time
+import sys
+
 
 # ==================== 核心統計優化函數 ====================
 
@@ -83,7 +85,14 @@ fig_global.update_layout(height=650, template='plotly_dark', hovermode='x unifie
 
 # ==================== 2. 計算個股多尺度結構變化 ====================
 print("--- 正在計算 [個股結構變化] ---")
-ind_tickers = ['MU']
+# 如果執行命令時有傳入參數，就使用該參數當作 Ticker；否則預設為 'MU'
+if len(sys.argv) > 1 and sys.argv[1].strip() != "":
+    target_ticker = sys.argv[1].strip().upper()
+else:
+    target_ticker = 'MU'
+
+ind_tickers = [target_ticker] # 動態決定目標
+
 ed_configs = [(250, 125, 'Long (250/125)'), (120, 60, 'Mid (120/60)'), (60, 30, 'Short (60/30)')]
 ER_window = 30
 
