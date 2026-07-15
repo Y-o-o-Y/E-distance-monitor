@@ -2,9 +2,42 @@ name: Auto Update Quant Dashboard
 
 on:
   schedule:
-    # 每天 UTC 21:30 執行 (美股收盤後半小時)
     - cron: '30 21 * * *'
-  workflow_dispatch: # 允許隨時在網頁上手動觸發執行
+  workflow_dispatch:
+    inputs:
+      # 新增輸入變數，預設為 MU
+      ticker_input:
+        description: '手動更新個股 Ticker'
+        required: true
+        default: 'MU'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        pip install yfinance numpy pandas plotly
+
+    # 執行時，將 GitHub Actions 接收到的 Ticker 傳給 Python
+    - name: Run calculation script
+      run: python update_dashboard.py "${{ github.event.inputs.ticker_input || 'MU' }}"
+
+    - name: Commit and push changes
+      run: |
+        git config --global user.name "Github Actions"
+        git config --global user.email "actions@github.com"
+        git add index.html
+        git diff-index --quiet HEAD || git commit -m "Auto-update data [skip ci]"
+        git push
 
 jobs:
   build:
