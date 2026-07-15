@@ -3,13 +3,7 @@ name: Auto Update Quant Dashboard
 on:
   schedule:
     - cron: '30 21 * * *'
-  workflow_dispatch:
-    inputs:
-      # 新增輸入變數，預設為 MU
-      ticker_input:
-        description: '手動更新個股 Ticker'
-        required: true
-        default: 'MU'
+  workflow_dispatch: # 允許手動觸發
 
 jobs:
   build:
@@ -27,9 +21,8 @@ jobs:
       run: |
         pip install yfinance numpy pandas plotly
 
-    # 執行時，將 GitHub Actions 接收到的 Ticker 傳給 Python
     - name: Run calculation script
-      run: python update_dashboard.py "${{ github.event.inputs.ticker_input || 'MU' }}"
+      run: python update_dashboard.py
 
     - name: Commit and push changes
       run: |
