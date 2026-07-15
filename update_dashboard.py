@@ -195,6 +195,54 @@ html_content = f"""
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }}
         .tab-content.active {{ display: block; }}
+
+        /* 控制面板樣式 */
+        .control-panel {{
+            background: #252525;
+            border: 1px solid #444;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }}
+        .control-panel h4 {{ margin: 0 0 5px 0; width: 100%; color: #00CC96; }}
+        .input-group {{
+            display: flex;
+            flex-direction: column;
+        }}
+        .input-group label {{
+            font-size: 11px;
+            color: #aaa;
+            margin-bottom: 4px;
+        }}
+        .control-panel input {{
+            background: #333;
+            border: 1px solid #555;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            outline: none;
+        }}
+        .control-panel input:focus {{
+            border-color: #00CC96;
+        }}
+        .btn {{
+            background-color: #00CC96;
+            color: #111;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            align-self: flex-end;
+            transition: 0.2s;
+        }}
+        .btn:hover {{ background-color: #00b383; }}
+        .btn:disabled {{ background-color: #555; color: #888; cursor: not-allowed; }}
+        #api-status {{ font-size: 12px; margin-top: 5px; width: 100%; }}
     </style>
 </head>
 <body>
@@ -205,8 +253,8 @@ html_content = f"""
     </div>
 
     <div class="tab-container">
-        <button class="tab active" onclick="openTab(event, 'global-tab')">🌐 全球市場統計分佈偏離度</button>
-        <button class="tab" onclick="openTab(event, 'individual-tab')">📈 個股統計分佈變化 ({'/'.join(ind_tickers)})</button>
+        <button class="tab active" onclick="openTab(event, 'global-tab')">🌐 全球市場偏離度</button>
+        <button class="tab" onclick="openTab(event, 'individual-tab')">📈 個股結構變化 ({'/'.join(ind_tickers)})</button>
     </div>
 
     <div class="content-container">
@@ -217,11 +265,38 @@ html_content = f"""
 
         <!-- 頁籤二：個股監控 -->
         <div id="individual-tab" class="tab-content">
+            
+            <!-- 網頁上手動更新控制面板 -->
+            <div class="control-panel">
+                <h4>🚀 網頁即時更換觀測個股</h4>
+                <div class="input-group">
+                    <label for="ticker-input">個股 Ticker (例如: AAPL, TSLA)</label>
+                    <input type="text" id="ticker-input" placeholder="MU" value="{target_ticker}">
+                </div>
+                <div class="input-group" style="flex-grow: 1; max-width: 300px;">
+                    <label for="token-input">GitHub Token (安全儲存於瀏覽器，僅需輸入一次)</label>
+                    <input type="password" id="token-input" placeholder="ghp_xxxxxxxxxxxx">
+                </div>
+                <button class="btn" id="submit-btn" onclick="triggerGithubWorkflow()">送出更新</button>
+                <div id="api-status"></div>
+                <div style="font-size: 11px; color: #888; width: 100%;">
+                    ※ 提示：第一次使用需要至 GitHub 申請一個經典的 Personal Access Token (PAT)，勾選 <code>workflow</code> 權限。<a href="https://github.com/settings/tokens/new" target="_blank" style="color: #00CC96;">點此快速申請</a>
+                </div>
+            </div>
+
             {fig_ind.to_html(full_html=False, include_plotlyjs='cdn')}
         </div>
     </div>
 
     <script>
+        // 初始化時從本地快取讀取 Token
+        document.addEventListener("DOMContentLoaded", function() {{
+            const savedToken = localStorage.getItem("gh_token");
+            if (savedToken) {{
+                document.getElementById("token-input").value = savedToken;
+            }}
+        }});
+
         function openTab(evt, tabId) {{
             var i, tabcontent, tabs;
             tabcontent = document.getElementsByClassName("tab-content");
@@ -234,9 +309,69 @@ html_content = f"""
             }}
             document.getElementById(tabId).classList.add("active");
             evt.currentTarget.classList.add("active");
-            
-            // 觸發 Plotly 重新渲染以適應容器大小
             window.dispatchEvent(new Event('resize'));
+        }}
+
+        // 發送 API 請求給 GitHub 來觸發 Workflow
+        async function triggerGithubWorkflow() {{
+            const ticker = document.getElementById("ticker-input").value.trim().toUpperCase();
+            const token = document.getElementById("token-input").value.trim();
+            const statusDiv = document.getElementById("api-status");
+            const btn = document.getElementById("submit-btn");
+
+            if (!ticker) {{
+                alert("請輸入 Ticker 名稱！");
+                return;
+            }}
+            if (!token) {{
+                alert("請輸入 GitHub Personal Access Token (PAT) 以獲得發送權限！");
+                return;
+            }}
+
+            // 儲存 Token，下次打開網頁不用重新輸入
+            localStorage.setItem("gh_token", token);
+            
+            btn.disabled = true;
+            statusDiv.innerHTML = "⏳ 正在與 GitHub 通訊，發送更新指令...";
+            statusDiv.style.color = "#888";
+
+            // 注意：請將這裡的用戶名與專案名改為你的實際路徑
+            const owner = "Y-o-o-Y"; 
+            const repo = "E-distance-monitor";
+            const workflowId = "run.yml"; // 對應 .github/workflows/run.yml
+
+            const url = `https://api.github.com/repos/${{owner}}/${{repo}}/actions/workflows/${{workflowId}}/dispatches`;
+
+            try {{
+                const response = await fetch(url, {{
+                    method: "POST",
+                    headers: {{
+                        "Authorization": `Bearer ${{token}}`,
+                        "Accept": "application/vnd.github+json",
+                        "X-GitHub-Api-Version": "2022-11-28"
+                    }},
+                    body: JSON.stringify({{
+                        ref: "main", // 使用 main 分支
+                        inputs: {{
+                            ticker_input: ticker
+                        }}
+                    }})
+                }});
+
+                if (response.status === 204) {{
+                    statusDiv.innerHTML = `✅ 成功發送指令！GitHub 已開始重新計算 <b>${{ticker}}</b> 的結構變化。<br>💡 請等待約 1 分鐘，然後「重新整理網頁」即可看到最新結果！`;
+                    statusDiv.style.color = "#00CC96";
+                }} else {{
+                    const errorData = await response.json().catch(() => ({{}}));
+                    statusDiv.innerHTML = `❌ 發送失敗 (代碼: ${{response.status}}): ${{errorData.message || '請確認 Token 是否正確且具有 workflow 權限'}`;
+                    statusDiv.style.color = "#FF4F56";
+                }}
+            }} catch (error) {{
+                statusDiv.innerHTML = `❌ 連線發生錯誤: ${{error.message}}`;
+                statusDiv.style.color = "#FF4F56";
+            }} finally {{
+                btn.disabled = false;
+            }}
         }}
     </script>
 </body>
