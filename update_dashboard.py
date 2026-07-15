@@ -73,8 +73,8 @@ for i in range(len(log_returns_np) - window_size_global + 1):
 # 繪製全球圖表
 fig_global = make_subplots(
     rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.1,
-    subplot_titles=("Global Total Energy Distance (Market Fragmentation)", 
-                    "Individual Asset Deviations (Contribution Analysis)")
+    subplot_titles=("Global Energy Distance", 
+                    "Individual Asset Contribution")
 )
 fig_global.add_trace(go.Scatter(x=dates_global, y=energy_values, mode='lines', line=dict(color='#00CC96', width=2), name='Total Energy'), row=1, col=1)
 for ticker in log_ret_global.columns:
@@ -196,8 +196,8 @@ html_content = f"""
     </div>
 
     <div class="tab-container">
-        <button class="tab active" onclick="openTab(event, 'global-tab')">🌐 全球市場偏離度</button>
-        <button class="tab" onclick="openTab(event, 'individual-tab')">📈 個股結構變化 ({'/'.join(ind_tickers)})</button>
+        <button class="tab active" onclick="openTab(event, 'global-tab')">🌐 全球市場統計分佈偏離度</button>
+        <button class="tab" onclick="openTab(event, 'individual-tab')">📈 個股統計分佈變化 ({'/'.join(ind_tickers)})</button>
     </div>
 
     <div class="content-container">
