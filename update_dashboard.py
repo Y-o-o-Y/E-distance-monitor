@@ -121,7 +121,7 @@ for ticker in ind_tickers:
 # 繪製個股圖表
 fig_ind = make_subplots(
     rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.1,
-    subplot_titles=("Multi-scale Energy Distance (Structural Change Detection)", "Efficiency Ratio (Trend Purity)")
+    subplot_titles=("Multi-scale Energy Distance", "Efficiency Ratio")
 )
 colors = {'Long (250/125)': '#636EFA', 'Mid (120/60)': '#AB63FA', 'Short (60/30)': '#00CC96'}
 for ticker in ind_tickers:
@@ -254,8 +254,8 @@ html_template = """<!DOCTYPE html>
     </div>
 
     <div class="tab-container">
-        <button class="tab active" onclick="openTab(event, 'global-tab')">🌐 全球市場偏離度</button>
-        <button class="tab" onclick="openTab(event, 'individual-tab')">📈 個股結構變化 ({{TARGET_TICKER}})</button>
+        <button class="tab active" onclick="openTab(event, 'global-tab')">🌐 全球市場統計分佈</button>
+        <button class="tab" onclick="openTab(event, 'individual-tab')">📈 個股統計分佈變化 ({{TARGET_TICKER}})</button>
     </div>
 
     <div class="content-container">
