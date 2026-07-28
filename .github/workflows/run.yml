@@ -1,12 +1,17 @@
 name: Auto Update Quant Dashboard
 
 on:
+  # 1. 保留手動觸發（可傳入特定標的）
   workflow_dispatch:
     inputs:
       ticker_input:
         description: '要計算的個股 Ticker'
         required: false
         default: 'MU'
+
+  # 2. 新增定時排程 (例如：台北時間每天早上 6:00 / UTC 22:00 執行)
+  schedule:
+    - cron: '0 22 * * *'
 
 jobs:
   build:
@@ -27,14 +32,17 @@ jobs:
 
     - name: Run calculation script
       run: |
-        # 讀取網頁端傳入的 ticker，並作為參數傳給 Python 腳本
-        python update_dashboard.py "${{ github.event.inputs.ticker_input }}"
+        # 若是排程觸發，ticker_input 會是空的，在 Bash 賦予預設值 'MU'
+        TICKER="${{ github.event.inputs.ticker_input }}"
+        if [ -z "$TICKER" ]; then
+          TICKER="MU"
+        fi
+        python update_dashboard.py "$TICKER"
 
     - name: Commit and Push Changes
       run: |
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git add index.html
-        # 只有在 index.html 有變動時才 commit，避免 workflow 報錯
-        git diff-index --quiet HEAD || git commit -m "Auto update dashboard for ${{ github.event.inputs.ticker_input }}"
+        git diff-index --quiet HEAD || git commit -m "Auto update dashboard"
         git push
